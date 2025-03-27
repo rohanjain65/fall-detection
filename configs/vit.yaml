@@ -1,0 +1,3 @@
+model:
+  backbone: "vit_b_16"
+  pretrained: true

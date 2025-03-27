@@ -1,6 +1,7 @@
 from torch import Tensor, nn
 from torchvision import models
 
+from utils.data import NUM_CLASSES
 from utils.misc import take_annotation_from
 
 
@@ -10,19 +11,19 @@ class FallDetectionModel(nn.Module):
 
     Args:
         backbone_name (str): Name of the backbone model.
-        num_classes (int): Number of output classes.
+        num_classes (int, optional): Number of output classes, default is NUM_CLASSES.
         pretrained (bool, optional): Load pretrained weights, enabled by default.
     """
 
-    def __init__(self, backbone_name: str, num_classes: int, *, pretrained: bool = True) -> None:
+    def __init__(self, backbone: str, *, num_classes: int = NUM_CLASSES, pretrained: bool = True) -> None:
         super(FallDetectionModel, self).__init__()
 
         # Validate the backbone name, TODO: Implement for ViT (isinstance)
-        assert hasattr(models, backbone_name), f"Model {backbone_name} not found in torchvision.models"
-        assert "convnext" in backbone_name, f"Model {backbone_name} is not a ConvNeXt model"
+        assert hasattr(models, backbone), f"Model {backbone} not found in torchvision.models"
+        assert "convnext" in backbone, f"Model {backbone} is not a ConvNeXt model"
 
         # Load the backbone
-        self.backbone = getattr(models, backbone_name)(weights="DEFAULT" if pretrained else None)
+        self.backbone = getattr(models, backbone)(weights="DEFAULT" if pretrained else None)
 
         # Replace the classifier
         num_features = self.backbone.classifier[-1].in_features

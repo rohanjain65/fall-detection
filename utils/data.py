@@ -10,7 +10,7 @@ from torch.utils.data import Dataset
 from torchvision.transforms.v2 import functional as F
 
 ID_TO_LABEL = ["Empty", "Standing", "Sitting", "Lying", "Bending", "Crawling"]
-NUM_CLASSES = len(ID_TO_LABEL)
+NUM_CLASSES = 6
 
 
 class FallDetectionDataset(Dataset):
