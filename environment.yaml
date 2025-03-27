@@ -1,0 +1,16 @@
+name: fall-detection
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+dependencies:
+  - python==3.10
+  - pip
+  - pytorch
+  - torchvision
+  - pytorch-cuda=11.8
+  - pillow
+  - matplotlib
+  - numpy
+  - tqdm
+  - wandb
