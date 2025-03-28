@@ -23,7 +23,7 @@ class FallDetectionModel(nn.Module):
         assert "convnext" in backbone, f"Model {backbone} is not a ConvNeXt model"
 
         # Load the backbone
-        self.backbone = getattr(models, backbone)(weights="DEFAULT" if pretrained else None)
+        self.backbone: nn.Module = getattr(models, backbone)(weights="DEFAULT" if pretrained else None)
 
         # Replace the classifier
         num_features = self.backbone.classifier[-1].in_features
