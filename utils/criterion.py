@@ -6,6 +6,8 @@ from torch import Tensor, nn
 
 from utils.misc import take_annotation_from
 
+EPSILON = 1e-8
+
 
 class Criterion(nn.Module):
     """
@@ -36,19 +38,55 @@ class FallDetectionCriterion(Criterion):
         class_frequencies (Tensor): Frequencies of each class in the dataset.
     """
 
-    def __init__(self, frequencies: Tensor = None) -> None:
+    def __init__(self, focal_gamma: float = 1.0, frequencies: Tensor = None) -> None:
         super().__init__()
 
+        self.focal_gamma = focal_gamma
         self.weight = self._calculate_weights(frequencies) if frequencies is not None else None
 
     def forward(self, predictions: Tensor, targets: Tensor) -> Dict[str, Tensor]:
-        mse_loss = F.cross_entropy(predictions, targets, weight=self.weight)
+        # ce_loss = F.cross_entropy(predictions, targets, weight=self.weight)
+        ce_loss = self._get_focal_loss(predictions, targets, weight=self.weight)
 
-        losses = {"ce": mse_loss}
+        losses = {"ce": ce_loss}
 
         losses["overall"] = losses["ce"]
 
         return losses
+
+    def _get_focal_loss(self, prediction_logits: Tensor, target_labels: Tensor, weight: Tensor = None) -> Tensor:
+        """
+        Computes the focal loss for the classification head. Gives more weight to hard-to-classify examples.
+
+        Inputs:
+            prediction_logits (Tensor): The predicted class logits [num_objects, num_classes].
+            target_labels (Tensor): The target class labels [num_objects].
+            weight (Tensor): The class weights [num_classes].
+
+        Returns:
+            focal_loss (Tensor): The focal loss.
+        """
+
+        # Compute the class probabilities
+        prediction_probabilities = F.softmax(prediction_logits, dim=1)
+
+        # Calculate the cross-entropy loss
+        log_probabilities = torch.log(prediction_probabilities.clamp_min(EPSILON))
+
+        loss_ce = F.nll_loss(log_probabilities, target_labels, weight=weight, reduction="none")
+
+        # Calculate the focal term
+        probability_target = prediction_probabilities[torch.arange(len(prediction_probabilities)), target_labels]
+
+        focal_term = (1 - probability_target) ** self.focal_gamma
+
+        # Combine the terms
+        focal_loss = focal_term * loss_ce
+
+        # Average the loss
+        focal_loss = focal_loss.mean()
+
+        return focal_loss
 
     def _calculate_weights(self, class_frequencies: Tensor) -> Tensor:
         """
