@@ -7,11 +7,12 @@ dependencies:
   - python==3.10
   - pip
   - pytorch
+  - cuda-toolkit=11.8
   - torchvision
-  - pytorch-cuda=11.8
   - pillow
   - matplotlib
   - numpy
+  - pandas
   - tqdm
   - wandb
   - ipykernel
