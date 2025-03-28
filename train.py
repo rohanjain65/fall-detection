@@ -6,17 +6,19 @@ from torch.utils.data import DataLoader
 from model.model import FallDetectionModel
 from utils.criterion import FallDetectionCriterion
 from utils.data import FallDetectionDataset
-from utils.misc import load_config
+from utils.misc import load_config, set_random_seed
 from utils.processor import train
 from utils.transforms import get_train_transforms, get_val_transforms
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+set_random_seed(42)
+
 args = load_config("configs/cnn.yaml")
 
 # Load the training & validation data
 train_dataset = FallDetectionDataset(split="train", transformations=get_train_transforms(), **args["dataset"])
-val_dataset = FallDetectionDataset(split="val", transformations=get_val_transforms(), **args["dataset"])
+val_dataset = FallDetectionDataset(split="test", transformations=get_val_transforms(), **args["dataset"])
 
 # Create the data loaders
 train_loader = DataLoader(train_dataset, **args["dataloader"], shuffle=True)
