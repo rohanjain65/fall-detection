@@ -67,6 +67,9 @@ class FallDetectionDataset(Dataset):
         self.video_paths = [join(self.root, video) for video in os.listdir(self.root)]
         self.data = self._process_data(self.video_paths)
 
+        # Calculate the class frequencies
+        self.frequencies = self._calculate_class_frequencies()
+
     def _process_data(self, video_paths: List[str]) -> List[Tuple[int, int, int]]:
         """
         Process the dataset to extract image paths and labels.
@@ -82,7 +85,10 @@ class FallDetectionDataset(Dataset):
 
         for video_index, video in enumerate(video_paths):
             # Load the image labels
-            labels = pd.read_csv(join(video, "labels.csv"))["class"].tolist()
+            labels = pd.read_csv(join(video, "labels.csv"))["class"]
+
+            # Replace 6 with 0 for the "Empty" class, TODO: Remove once we create a preprocessing script
+            labels = labels.replace(6, 0).tolist()
 
             # Create a (video_index, frame_index, label) tuple for each frame. Frame indices start at 1.
             video_data = [(video_index, frame_index + 1, label) for frame_index, label in enumerate(labels)]
@@ -90,6 +96,21 @@ class FallDetectionDataset(Dataset):
             data.extend(video_data)
 
         return data
+
+    def _calculate_class_frequencies(self) -> Tensor:
+        """
+        Calculate the frequency of each class in the dataset.
+
+        Returns:
+            frequencies (Tensor): A tensor containing the frequency of each class.
+        """
+
+        frequencies = torch.zeros(NUM_CLASSES, dtype=torch.float32)
+
+        for _, _, label in self.data:
+            frequencies[label] += 1
+
+        return frequencies
 
     def __len__(self) -> int:
         return len(self.data)
