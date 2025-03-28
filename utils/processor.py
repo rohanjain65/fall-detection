@@ -4,6 +4,7 @@ from typing import Dict
 
 import torch
 import wandb
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -49,10 +50,10 @@ def train(
     for epoch in range(epochs):
         train_one_epoch(model, optimizer, criterion, train_data, epoch, device)
 
-        val_losses = evaluate(model, criterion, val_data, epoch, device)
+        val_losses, val_metrics = evaluate(model, criterion, val_data, epoch, device)
 
         # Log the validation losses
-        wandb.log({"val": {"loss": val_losses}}, step=wandb.run.step)
+        wandb.log({"val": {"loss": val_losses, "metric": val_metrics}}, step=wandb.run.step)
 
         # Save the latest and best model weights
         torch.save(model.state_dict(), join(output_dir, "last.pt"))
@@ -107,6 +108,7 @@ def train_one_epoch(
         wandb.log({"train": {"loss": losses}}, step=wandb.run.step + len(images))
 
 
+# TODO: Move metrics to utils/metrics.py
 @torch.no_grad()
 def evaluate(
     model: FallDetectionModel,
@@ -136,6 +138,9 @@ def evaluate(
     # Keep track of the running loss
     losses = {}
 
+    all_targets = []
+    all_predictions = []
+
     for images, targets in tqdm(data, desc=f"Validation (Epoch {epoch})", dynamic_ncols=True):
         # Send the batch to the evaluation device
         images, targets = send_to_device(images, device), send_to_device(targets, device)
@@ -149,6 +154,21 @@ def evaluate(
         # Update the running loss
         losses = {k: losses.get(k, 0) + v.item() for k, v in batch_losses.items()}
 
+        # Update the running metrics
+        predicted_labels = predictions.argmax(dim=1).cpu().numpy()
+        true_labels = targets.cpu().numpy()
+
+        all_predictions.extend(predicted_labels)
+        all_targets.extend(true_labels)
+
+    # Calculate the average losses
     losses = {k: v / len(data) for k, v in losses.items()}
 
-    return losses
+    # Calculate the metrics
+    precision = precision_score(all_targets, all_predictions, average="weighted")
+    recall = recall_score(all_targets, all_predictions, average="weighted")
+    accuracy = accuracy_score(all_targets, all_predictions)
+
+    metrics = {"precision": precision, "recall": recall, "accuracy": accuracy}
+
+    return losses, metrics
