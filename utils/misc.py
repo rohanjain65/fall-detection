@@ -66,7 +66,7 @@ def save_config(path: str, config: Dict) -> None:
         yaml.dump(config, file)
 
 
-def parse_config(path: str) -> Dict:
+def load_config(path: str) -> Dict:
     """
     Reads a yaml file and returns a dictionary with the configuration parameters.
     """
