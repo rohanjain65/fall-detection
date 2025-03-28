@@ -1,3 +1,24 @@
 model:
   backbone: "convnext_tiny"
   pretrained: true
+
+optimizer:
+  lr: 1.0e-3
+  weight_decay: 1.0e-2
+
+train:
+  epochs: 20
+  output_dir: "weights/"
+  run_name: "convnext-tiny_initial"
+
+dataset:
+  root: "data/"
+  modality: "rgb"
+
+dataloader:
+  batch_size: 128
+  num_workers: 4
+
+tags:
+  - "cnn"
+  - "rgb"
