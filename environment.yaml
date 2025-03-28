@@ -12,6 +12,7 @@ dependencies:
   - pillow
   - matplotlib
   - numpy
+  - scikit-learn
   - pandas
   - tqdm
   - wandb
