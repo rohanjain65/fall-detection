@@ -61,14 +61,13 @@ class NTUDataset(Dataset):
         # Validate the dataset file structure
         assert os.path.exists(root), f"Dataset root {root} does not exist."
         assert split in ["train", "val", "test"], f"Invalid split {split}, must be one of 'train', 'val', or 'test'."
-        # assert os.path.exists(join(root, split)), f"Split {split} does not exist in dataset root {root}."
+        assert os.path.exists(join(root, split)), f"Split {split} does not exist in dataset root {root}."
 
         # Validate the modality
         assert modality in ["rgb", "depth"], f"Invalid modality {modality}, must be one of 'rgb' or 'depth'."
 
         self.modality = modality
-        # self.root = join(root, split, modality)
-        self.root = join(root, modality)
+        self.root = join(root, split, modality)
         self.transformations = transformations
 
         # Load the dataset metadata
@@ -94,7 +93,7 @@ class NTUDataset(Dataset):
             num_frames = len(glob(join(video_path, "*.png")))
 
             # Parse the action ID from the video path
-            label = self._parse_action_id(video_path)
+            label = parse_action_id(video_path)
 
             # Create a (video_index, frame_index, label) tuple for each frame.
             video_data = [(video_index, frame_index, label) for frame_index in range(num_frames)]
@@ -102,36 +101,6 @@ class NTUDataset(Dataset):
             data.extend(video_data)
 
         return data
-
-    def _parse_action_id(self, file_path: str) -> int:
-        """
-        Parse action ID from the file path. File paths are expected to be in the format: SsssCcccPpppRrrrAaaa
-
-        sss - Setup number
-        ccc - Camera ID
-        ppp - Subject ID
-        rrr - Replication number (1 or 2)
-        aaa - Action class label.
-
-        Args:
-            video_path (str): Path to the video file.
-
-        Returns:
-            action_id (int): Action ID extracted from the video path.
-        """
-
-        # Extract the action ID
-        match = re.search(r"A(\d{3})", file_path)
-
-        # Check if the match was successful
-        assert match is not None, f"Failed to parse action ID from {file_path}"
-
-        action_id = int(match.group(1))
-
-        # Convert to fall/no-fall
-        action_id = int(action_id == FALLING_ACTION_ID)
-
-        return action_id
 
     def calculate_class_frequencies(self) -> Tensor:
         """
@@ -179,3 +148,34 @@ class NTUDataset(Dataset):
             image = self.transformations(image)
 
         return image, class_id
+
+
+def parse_action_id(file_path: str) -> int:
+    """
+    Parse action ID from the file path. File paths are expected to be in the format: SsssCcccPpppRrrrAaaa
+
+    sss - Setup number
+    ccc - Camera ID
+    ppp - Subject ID
+    rrr - Replication number (1 or 2)
+    aaa - Action class label.
+
+    Args:
+        video_path (str): Path to the video file.
+
+    Returns:
+        action_id (int): Action ID extracted from the video path.
+    """
+
+    # Extract the action ID
+    match = re.search(r"A(\d{3})", file_path)
+
+    # Check if the match was successful
+    assert match is not None, f"Failed to parse action ID from {file_path}"
+
+    action_id = int(match.group(1))
+
+    # Convert to fall/no-fall
+    action_id = int(action_id == FALLING_ACTION_ID)
+
+    return action_id

@@ -1,4 +1,6 @@
 import os
+import random
+import shutil
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from glob import glob
@@ -6,8 +8,11 @@ from os.path import join
 
 import torchvision
 from PIL.Image import Image
+from sklearn.model_selection import train_test_split
 from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
+
+from data.ntu_dataset import parse_action_id
 
 DATA_ROOT = "/data/fall-detection/ntu/processed/"
 
@@ -97,6 +102,87 @@ def rename_depth_files(root: str) -> None:
             os.rename(image_path, new_file_path)
 
 
-if __name__ == "__main__":
-    process_rgb_videos(join(RGB_ROOT, "videos"), RGB_ROOT)
-    # rename_depth_files(DEPTH_ROOT)
+def balance_classes(root: str, *, ratio: int = 4) -> None:
+    """
+    Balance the number of falling and non-falling videos in the dataset by randomly removing non-falling videos.
+
+    Args:
+        root (str): The root directory of the dataset.
+        ratio (int): The desired ratio of non-falling to falling videos. Default is 4.
+
+    """
+    rgb_root = join(root, "rgb")
+    depth_root = join(root, "depth")
+
+    # Get the list of all video names in the RGB directory
+    video_names = os.listdir(rgb_root)
+
+    # Separate the video paths into "falling" and "non-falling" categories
+    falling_videos = []
+    non_falling_videos = []
+
+    for video_name in video_names:
+        action_id = parse_action_id(video_name)
+
+        if action_id == 1:
+            falling_videos.append(video_name)
+        else:
+            non_falling_videos.append(video_name)
+
+    # Randomly select 4x the number of falling videos from non-falling videos
+    num_videos_to_remove = len(non_falling_videos) - (ratio * len(falling_videos))
+
+    videos_to_remove = random.sample(non_falling_videos, num_videos_to_remove)
+
+    for video_name in tqdm(videos_to_remove, desc="Removing videos", unit="video"):
+        rgb_path = join(rgb_root, video_name)
+        depth_path = join(depth_root, video_name)
+
+        assert os.path.exists(rgb_path), f"RGB path does not exist: {rgb_path}"
+        assert os.path.exists(depth_path), f"Depth path does not exist: {depth_path}"
+
+        shutil.rmtree(rgb_path)
+        shutil.rmtree(depth_path)
+
+
+def train_val_split(root: str, *, train_size: float = 0.75) -> None:
+    """
+    Splits the dataset into train and val sets.
+
+    Args:
+        root (str): The root directory of the dataset.
+        train_size (float): The proportion of the dataset to include in the train split.
+    """
+    rgb_root = join(root, "rgb")
+    depth_root = join(root, "depth")
+
+    # Get the list of all video names in the RGB directory
+    video_names = os.listdir(rgb_root)
+
+    # Seperate the videos into train and val sets
+    train_videos, val_videos = train_test_split(video_names, train_size=train_size)
+
+    # Create the train and val directories if they don't exist
+    os.makedirs(join(root, "train", "rgb"), exist_ok=True)
+    os.makedirs(join(root, "train", "depth"), exist_ok=True)
+    os.makedirs(join(root, "val", "rgb"), exist_ok=True)
+    os.makedirs(join(root, "val", "depth"), exist_ok=True)
+
+    # Move the train videos
+    for video in tqdm(train_videos, desc="Moving train videos"):
+        shutil.move(join(rgb_root, video), join(root, "train", "rgb", video))
+        shutil.move(join(depth_root, video), join(root, "train", "depth", video))
+
+    # Move the val videos
+    for video in tqdm(val_videos, desc="Moving val videos"):
+        shutil.move(join(rgb_root, video), join(root, "val", "rgb", video))
+        shutil.move(join(depth_root, video), join(root, "val", "depth", video))
+
+    # Remove the original directories
+    shutil.rmtree(rgb_root)
+    shutil.rmtree(depth_root)
+
+
+# if __name__ == "__main__":
+# process_rgb_videos(join(RGB_ROOT, "videos"), RGB_ROOT)
+# rename_depth_files(DEPTH_ROOT)
