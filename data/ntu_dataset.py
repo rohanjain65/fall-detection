@@ -1,39 +1,46 @@
 import os
+import re
+from glob import glob
 from os.path import join
 from typing import Callable, List, Tuple
 
-import pandas as pd
 import torch
 from PIL import Image
 from torch import Tensor
 from torch.utils.data import Dataset
 from torchvision.transforms.v2 import functional as F
+from tqdm import tqdm
 
-ID_TO_LABEL = ["Empty", "Standing", "Sitting", "Lying", "Bending", "Crawling"]
-NUM_CLASSES = 6
+ID_TO_LABEL = ["Not Falling", "Falling"]
+NUM_CLASSES = 2
+
+FALLING_ACTION_ID = 43
 
 
-class FallDetectionDataset(Dataset):
+class NTUDataset(Dataset):
     """
-    Dataset class for the Fall Detection dataset.
+    Dataset class for the Fall Detection dataset using NTU data.
 
     Expects the dataset to be structured as follows:
     root/
     ├── split/
-        ├── video-1/
-            ├── rgb/
-                ├── rgb_0001.jpg
-                ├── rgb_0002.jpg
+        ├── rgb/
+            ├── video-1/
+                ├── 0.png
+                ├── 1.png
                 ...
-            ├── depth/
-                ├── depth_0001.jpg
-                ├── depth_0002.jpg
+            ├── video-2/
+                ├── 0.png
+                ├── 1.png
                 ...
-            ├── labels.csv
-        ├── video-2/
-            ├── rgb/
-            ├── depth/
-            ├── labels.csv
+        ├── depth/
+            ├── video-1/
+                ├── 0.png
+                ├── 1.png
+                ...
+            ├── video-2/
+                ├── 0.png
+                ├── 1.png
     ...
 
     Args:
@@ -54,21 +61,20 @@ class FallDetectionDataset(Dataset):
         # Validate the dataset file structure
         assert os.path.exists(root), f"Dataset root {root} does not exist."
         assert split in ["train", "val", "test"], f"Invalid split {split}, must be one of 'train', 'val', or 'test'."
-        assert os.path.exists(join(root, split)), f"Split {split} does not exist in dataset root {root}."
+        # assert os.path.exists(join(root, split)), f"Split {split} does not exist in dataset root {root}."
 
         # Validate the modality
         assert modality in ["rgb", "depth"], f"Invalid modality {modality}, must be one of 'rgb' or 'depth'."
 
-        self.root = join(root, split)
         self.modality = modality
+        # self.root = join(root, split, modality)
+        self.root = join(root, modality)
         self.transformations = transformations
 
         # Load the dataset metadata
         self.video_paths = [join(self.root, video) for video in os.listdir(self.root)]
+        # self.video_paths = self.video_paths[:1000]  # Limit to 100 videos for testing
         self.data = self._process_data(self.video_paths)
-
-        # Calculate the class frequencies
-        self.frequencies = self._calculate_class_frequencies()
 
     def _process_data(self, video_paths: List[str]) -> List[Tuple[int, int, int]]:
         """
@@ -83,21 +89,51 @@ class FallDetectionDataset(Dataset):
 
         data = []
 
-        for video_index, video in enumerate(video_paths):
-            # Load the image labels
-            labels = pd.read_csv(join(video, "labels.csv"))["class"]
+        for video_index, video_path in tqdm(enumerate(video_paths), total=len(video_paths), desc="Processing Videos", unit="video"):
+            # Count the number of frames in the video directory
+            num_frames = len(glob(join(video_path, "*.png")))
 
-            # Replace 6 with 0 for the "Empty" class, TODO: Remove once we create a preprocessing script
-            labels = labels.replace(6, 0).tolist()
+            # Parse the action ID from the video path
+            label = self._parse_action_id(video_path)
 
-            # Create a (video_index, frame_index, label) tuple for each frame. Frame indices start at 1.
-            video_data = [(video_index, frame_index + 1, label) for frame_index, label in enumerate(labels)]
+            # Create a (video_index, frame_index, label) tuple for each frame.
+            video_data = [(video_index, frame_index, label) for frame_index in range(num_frames)]
 
             data.extend(video_data)
 
         return data
 
-    def _calculate_class_frequencies(self) -> Tensor:
+    def _parse_action_id(self, file_path: str) -> int:
+        """
+        Parse action ID from the file path. File paths are expected to be in the format: SsssCcccPpppRrrrAaaa
+
+        sss - Setup number
+        ccc - Camera ID
+        ppp - Subject ID
+        rrr - Replication number (1 or 2)
+        aaa - Action class label.
+
+        Args:
+            video_path (str): Path to the video file.
+
+        Returns:
+            action_id (int): Action ID extracted from the video path.
+        """
+
+        # Extract the action ID
+        match = re.search(r"A(\d{3})", file_path)
+
+        # Check if the match was successful
+        assert match is not None, f"Failed to parse action ID from {file_path}"
+
+        action_id = int(match.group(1))
+
+        # Convert to fall/no-fall
+        action_id = int(action_id == FALLING_ACTION_ID)
+
+        return action_id
+
+    def calculate_class_frequencies(self) -> Tensor:
         """
         Calculate the frequency of each class in the dataset.
 
@@ -107,7 +143,7 @@ class FallDetectionDataset(Dataset):
 
         frequencies = torch.zeros(NUM_CLASSES, dtype=torch.float32)
 
-        for _, _, label in self.data:
+        for _, _, label in tqdm(self.data, desc="Calculating Class Frequencies", unit="frame"):
             frequencies[label] += 1
 
         return frequencies
@@ -131,7 +167,7 @@ class FallDetectionDataset(Dataset):
         video_index, frame_index, class_id = self.data[idx]
 
         # Construct the image path
-        image_path = join(self.video_paths[video_index], self.modality, f"{self.modality}_{frame_index:04d}.png")
+        image_path = join(self.video_paths[video_index], f"{frame_index}.png")
 
         # Load the image
         image = Image.open(image_path).convert("RGB")
