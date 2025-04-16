@@ -10,12 +10,11 @@ class FallDetectionModel(nn.Module):
     Vision model for fall detection supporting ConvNeXt and ViT backbones.
 
     Args:
-        backbone_name (str): Name of the backbone model.
         num_classes (int): Number of output classes.
         pretrained (bool, optional): Load pretrained weights, enabled by default.
     """
 
-    def __init__(self, backbone: str, num_classes: int, *, pretrained: bool = True) -> None:
+    def __init__(self, num_classes: int, *, pretrained: bool = True) -> None:
         super(FallDetectionModel, self).__init__()
 
         assert hasattr(models, backbone) or backbone == "vit_b_16", f"Model {backbone} not found"

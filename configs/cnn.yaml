@@ -12,7 +12,7 @@ train:
   run_name: "convnext-tiny_focal-loss"
 
 dataset:
-  root: "data/"
+  root: "/data/fall-detection/ntu/processed/"
   modality: "rgb"
 
 dataloader:
