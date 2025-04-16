@@ -1,3 +1,24 @@
 model:
   backbone: "vit_b_16"
   pretrained: true
+
+optimizer:
+  lr: 1.0e-4
+  weight_decay: 1.0e-2
+
+train:
+  epochs: 10
+  output_dir: "weights/"
+  run_name: "vit-b-16_focal-loss"
+
+dataset:
+  root: "/data/fall-detection/ntu/processed/"
+  modality: "rgb"
+
+dataloader:
+  batch_size: 128
+  num_workers: 4
+
+tags:
+  - "vit"
+  - "rgb"
