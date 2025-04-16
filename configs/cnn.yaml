@@ -13,7 +13,8 @@ train:
 
 dataset:
   root: "/data/fall-detection/ntu/processed/"
-  modality: "rgb"
+  modality: "both"
+  
 
 dataloader:
   batch_size: 128

@@ -20,6 +20,12 @@ args = load_config("configs/cnn.yaml")
 train_dataset = NTUDataset(**args["dataset"], split="train", transformations=get_train_transforms())
 val_dataset = NTUDataset(**args["dataset"], split="val", transformations=get_val_transforms())
 
+# check if _getitem_ is working
+image, classid = train_dataset[0]
+print(f"Image shape: {image.shape}")
+print(f"Class ID: {classid}")
+
+
 # Create the data loaders
 train_loader = DataLoader(train_dataset, **args["dataloader"], shuffle=True)
 val_loader = DataLoader(val_dataset, **args["dataloader"], shuffle=False)

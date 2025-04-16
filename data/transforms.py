@@ -34,8 +34,8 @@ def get_train_transforms(image_size: Tuple[int, int] = (240, 320)) -> Callable[[
             transforms.RandomHorizontalFlip(),
             transforms.RandomRotation(degrees=5),
             transforms.RandomAffine(degrees=5, translate=(0.05, 0.05), scale=(0.95, 1.05), shear=5),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05),
-            transforms.RandomGrayscale(p=0.1),
+            # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05),
+            # transforms.RandomGrayscale(p=0.1),
             transforms.Normalize(IMNET_MEAN, IMNET_STD),
             transforms.RandomErasing(p=0.3, scale=(0.02, 0.15), ratio=(0.3, 3.0), value=0),
         ]

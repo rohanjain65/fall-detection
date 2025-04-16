@@ -87,7 +87,7 @@ class NTUDataset(Dataset):
         self.transformations = transformations
 
         # Load the dataset metadata
-        # self.video_paths = self.video_paths[:1000]  # Limit to 100 videos for testing
+        self.video_paths = self.video_paths[:100]  # Limit to 100 videos for testing
         self.data = self._process_data(self.video_paths)
 
     def _process_data(self, video_paths: List[str]) -> List[Tuple[int, int, int]]:
@@ -171,6 +171,9 @@ class NTUDataset(Dataset):
             depth_image = Image.open(depth_image_path).convert("L")  # Convert to grayscale
             depth_tensor = F.to_dtype(F.to_image(depth_image), torch.float32) / 255.0
             
+            # Resize depth tensor to match RGB tensor size
+            depth_tensor = F.resize(depth_tensor, size=rgb_tensor.shape[1:])
+
             # Combine RGB and depth into a 4-channel tensor
             image = torch.cat([rgb_tensor, depth_tensor], dim=0)
             
