@@ -38,11 +38,11 @@ class FallDetectionCriterion(Criterion):
         class_frequencies (Tensor): Frequencies of each class in the dataset.
     """
 
-    def __init__(self, focal_gamma: float = 1.0, frequencies: Tensor = None) -> None:
+    def __init__(self, focal_gamma: float = 1.0, class_frequencies: Tensor = None) -> None:
         super().__init__()
 
         self.focal_gamma = focal_gamma
-        self.weight = self._calculate_weights(frequencies) if frequencies is not None else None
+        self.weight = self._calculate_weights(class_frequencies) if class_frequencies is not None else None
 
     def forward(self, predictions: Tensor, targets: Tensor) -> Dict[str, Tensor]:
         # ce_loss = F.cross_entropy(predictions, targets, weight=self.weight)

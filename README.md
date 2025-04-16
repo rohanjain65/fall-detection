@@ -18,5 +18,5 @@ conda activate fall-detection
 
 3. Download the dataset:
 ```bash
-./scripts/download_data.sh
+./scripts/download_ncca.sh
 ```
