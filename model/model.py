@@ -1,12 +1,13 @@
 from torch import Tensor, nn
 from torchvision import models
+from torchvision.models import vit_b_16, ViT_B_16_Weights
 
 from utils.misc import take_annotation_from
 
 
 class FallDetectionModel(nn.Module):
     """
-    Vision model for fall detection.
+    Vision model for fall detection supporting ConvNeXt and ViT backbones.
 
     Args:
         backbone_name (str): Name of the backbone model.
@@ -17,20 +18,25 @@ class FallDetectionModel(nn.Module):
     def __init__(self, backbone: str, num_classes: int, *, pretrained: bool = True) -> None:
         super(FallDetectionModel, self).__init__()
 
-        # Validate the backbone name, TODO: Implement for ViT (isinstance)
-        assert hasattr(models, backbone), f"Model {backbone} not found in torchvision.models"
-        assert "convnext" in backbone, f"Model {backbone} is not a ConvNeXt model"
+        assert hasattr(models, backbone) or backbone == "vit_b_16", f"Model {backbone} not found"
 
-        # Load the backbone
-        self.backbone: nn.Module = getattr(models, backbone)(weights="DEFAULT" if pretrained else None)
+        if "convnext" in backbone:
+            self.backbone: nn.Module = getattr(models, backbone)(weights="DEFAULT" if pretrained else None)
+            num_features = self.backbone.classifier[-1].in_features
+            self.backbone.classifier[-1] = nn.Identity()
 
-        # Replace the classifier
-        num_features = self.backbone.classifier[-1].in_features
-        self.backbone.classifier[-1] = nn.Identity()
+        elif backbone == "vit_b_16":
+            weights = ViT_B_16_Weights.DEFAULT if pretrained else None
+            self.backbone = vit_b_16(weights=weights)
+            num_features = self.backbone.heads.head.in_features
+            self.backbone.heads.head = nn.Identity()
+
+        else:
+            raise ValueError(f"Unsupported backbone type: {backbone}")
 
         self.classifier = nn.Linear(num_features, num_classes)
 
-        # Initialize the model weights
+        # Initialize weights
         self._initialize_weights()
 
     def forward_features(self, features: Tensor) -> Tensor:
@@ -38,13 +44,12 @@ class FallDetectionModel(nn.Module):
         Forward pass of the backbone model.
 
         Args:
-            x (Tensor): Input tensor.
+            features (Tensor): Input tensor.
 
         Returns:
-            features (Tensor): Image features, with shape (batch_size, num_features).
+            features (Tensor): Image features, shape (batch_size, num_features).
         """
         features = self.backbone(features)
-
         return features
 
     def forward(self, x: Tensor) -> Tensor:
@@ -55,15 +60,10 @@ class FallDetectionModel(nn.Module):
             x (Tensor): Input tensor.
 
         Returns:
-            logits (Tensor): Model predictions, with shape (batch_size, num_classes).
+            logits (Tensor): Model predictions, shape (batch_size, num_classes).
         """
-
-        # Extract the image features
         features = self.forward_features(x)
-
-        # Pass the features through the classifier
         logits = self.classifier(features)
-
         return logits
 
     @take_annotation_from(forward)
