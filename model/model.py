@@ -1,7 +1,6 @@
 from torch import Tensor, nn
 from torchvision import models
 
-from utils.data import NUM_CLASSES
 from utils.misc import take_annotation_from
 
 
@@ -11,11 +10,11 @@ class FallDetectionModel(nn.Module):
 
     Args:
         backbone_name (str): Name of the backbone model.
-        num_classes (int, optional): Number of output classes, default is NUM_CLASSES.
+        num_classes (int): Number of output classes.
         pretrained (bool, optional): Load pretrained weights, enabled by default.
     """
 
-    def __init__(self, backbone: str, *, num_classes: int = NUM_CLASSES, pretrained: bool = True) -> None:
+    def __init__(self, backbone: str, num_classes: int, *, pretrained: bool = True) -> None:
         super(FallDetectionModel, self).__init__()
 
         # Validate the backbone name, TODO: Implement for ViT (isinstance)
