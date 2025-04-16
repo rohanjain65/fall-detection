@@ -3,7 +3,7 @@ import wandb
 from torch import optim
 from torch.utils.data import DataLoader
 
-from data.ncca_dataset import NCCADataset
+from data.ncca_dataset import NUM_CLASSES, NCCADataset
 from data.transforms import get_train_transforms, get_val_transforms
 from model.model import FallDetectionModel
 from utils.criterion import FallDetectionCriterion
@@ -25,7 +25,7 @@ train_loader = DataLoader(train_dataset, **args["dataloader"], shuffle=True)
 val_loader = DataLoader(val_dataset, **args["dataloader"], shuffle=False)
 
 # Create the model
-model = FallDetectionModel(**args["model"]).to(DEVICE)
+model = FallDetectionModel(**args["model"], num_classes=NUM_CLASSES).to(DEVICE)
 
 # Create the optimizer
 optimizer = optim.AdamW(model.parameters(), **args["optimizer"])
