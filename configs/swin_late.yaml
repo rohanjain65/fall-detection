@@ -1,9 +1,9 @@
 fusion: "late"
 
 model:
-  backbone: "convnext_tiny"
-  rgb_weights: "weights/convnext-tiny_ntu-rgb_240p/best.pt"
-  depth_weights: "weights/convnext-tiny_ntu-depth_240p/best.pt"
+  backbone: "swin_t"
+  rgb_weights: "weights/swin-t_ntu-rgb_240p/best.pt"
+  depth_weights: "weights/swin-t_ntu-depth_240p/best.pt"
 
 optimizer:
   lr: 1.0e-4
@@ -12,7 +12,7 @@ optimizer:
 train:
   epochs: 5
   output_dir: "weights/"
-  run_name: "convnext-tiny_ntu-late_240p"
+  run_name: "swin-t_ntu-late_240p"
 
 dataset:
   root: "/home/tdutton/datasets/fall-detection/ntu/processed/"
@@ -22,10 +22,10 @@ transforms:
   image_size: [240, 426]
 
 dataloader:
-  batch_size: 96
+  batch_size: 96 
   num_workers: 8
 
 tags:
-  - "cnn"
+  - "swin"
   - "late"
   - "ntu"

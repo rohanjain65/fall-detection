@@ -7,22 +7,22 @@ optimizer:
   weight_decay: 1.0e-2
 
 train:
-  epochs: 10
+  epochs: 5
   output_dir: "weights/"
-  run_name: "swin-t_ntu-rgb_240p"
+  run_name: "swin-t_ntu-early_240p"
 
 dataset:
   root: "/home/archy1/datasets/fall-detection/ntu/processed/"
-  modality: "rgb"
+  modality: "both"
 
 transforms:
   image_size: [240, 426]
 
 dataloader:
-  batch_size: 96
+  batch_size: 80 
   num_workers: 8
 
 tags:
-  - "vit"
-  - "rgb"
+  - "swin"
+  - "early"
   - "ntu"
