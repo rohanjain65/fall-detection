@@ -1,6 +1,9 @@
+fusion: "late"
+
 model:
   backbone: "convnext_tiny"
-  pretrained: true
+  rgb_weights: "weights/convnext-tiny_ntu-rgb_240p/best.pt"
+  depth_weights: "weights/convnext-tiny_ntu-depth_240p/best.pt"
 
 optimizer:
   lr: 1.0e-4
@@ -9,7 +12,7 @@ optimizer:
 train:
   epochs: 5
   output_dir: "weights/"
-  run_name: "convnext-tiny_ntu-early_240p"
+  run_name: "convnext-tiny_ntu-late_240p"
 
 dataset:
   root: "/home/archy1/datasets/fall-detection/ntu/processed/"
@@ -24,5 +27,5 @@ dataloader:
 
 tags:
   - "cnn"
-  - "early"
+  - "late"
   - "ntu"

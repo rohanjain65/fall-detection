@@ -9,13 +9,13 @@ from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from model.model import FallDetectionModel
+from model.model import ImageClassifier
 from utils.criterion import Criterion
 from utils.misc import send_to_device
 
 
 def train(
-    model: FallDetectionModel,
+    model: ImageClassifier,
     optimizer: optim.Optimizer,
     criterion: Criterion,
     train_data: DataLoader,
@@ -45,7 +45,7 @@ def train(
     # Create the output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
 
-    best_loss = float("inf")
+    best_metric = float("-inf")
 
     for epoch in range(epochs):
         train_one_epoch(model, optimizer, criterion, train_data, epoch, device)
@@ -58,13 +58,13 @@ def train(
         # Save the latest and best model weights
         torch.save(model.state_dict(), join(output_dir, "last.pt"))
 
-        if val_losses["overall"] < best_loss:
-            best_loss = val_losses["overall"]
+        if val_metrics["accuracy"] > best_metric:
+            best_metric = val_metrics["accuracy"]
             torch.save(model.state_dict(), join(output_dir, "best.pt"))
 
 
 def train_one_epoch(
-    model: FallDetectionModel,
+    model: ImageClassifier,
     optimizer: optim.Optimizer,
     criterion: Criterion,
     data: DataLoader,
@@ -111,7 +111,7 @@ def train_one_epoch(
 # TODO: Move metrics to utils/metrics.py
 @torch.no_grad()
 def evaluate(
-    model: FallDetectionModel,
+    model: ImageClassifier,
     criterion: Criterion,
     data: DataLoader,
     epoch: int,
