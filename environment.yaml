@@ -1,19 +1,19 @@
 name: fall-detection
 channels:
   - conda-forge
-  - pytorch
-  - nvidia
 dependencies:
   - python==3.10
   - pip
-  - pytorch
-  - cuda-toolkit=11.8
-  - torchvision
   - pillow
   - matplotlib
-  - numpy
+  - numpy<2.0.0
   - scikit-learn
   - pandas
   - tqdm
   - wandb
   - ipykernel
+  - pip:
+      - torch==2.2.1+cu118
+      - torchvision==0.17.1+cu118
+      - torchaudio==2.2.1+cu118
+      - --extra-index-url https://download.pytorch.org/whl/cu118
