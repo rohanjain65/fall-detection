@@ -10,6 +10,26 @@ RGB_STD = [0.229, 0.224, 0.225]
 DEPTH_MEAN = [sum(RGB_MEAN) / 3]
 DEPTH_STD = [sum(RGB_STD) / 3]
 
+class ColorJitterWrapper:
+    """
+    A wrapper for the ColorJitter transform that applies it only to the first 3 channels of the image.    
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.color_jitter = transforms.ColorJitter(*args, **kwargs)
+
+    def __call__(self, image: Tensor) -> Tensor:
+        # Check if image has more than 3 channels
+        if image.shape[0] <= 3:
+            # Apply color jitter directly
+            return self.color_jitter(image)
+        else:
+            # Separate RGB channels (first 3 channels)
+            rgb_channels = image[:3]
+            # Apply color jitter to the RGB channels
+            jittered_rgb = self.color_jitter(rgb_channels)
+            # Combine back with the other channels
+            return torch.cat([jittered_rgb, image[3:]], dim=0)
 
 class AddGaussianNoise(object):
     def __init__(self, mean=0.0, std=1.0):
@@ -45,7 +65,7 @@ def get_train_transforms(image_size: Tuple[int, int] = (240, 320), modality: str
     photometric_transforms = (
         transforms.RandomChoice(
             [
-                transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05),
+                ColorJitterWrapper(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05),
                 AddGaussianNoise(std=0.05),
             ]
         ),
