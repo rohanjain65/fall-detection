@@ -123,6 +123,21 @@ class NTUDataset(Dataset):
 
         return frequencies
 
+    def get_num_channels(self) -> int:
+        """
+        Get the number of channels in the images provided by the dataset.
+
+        Returns:
+            num_channels (int): The number of channels in the images.
+        """
+
+        if self.modality == "depth":
+            return 1
+        elif self.modality == "rgb":
+            return 3
+        elif self.modality == "both":
+            return 4
+
     def __len__(self) -> int:
         return len(self.data)
 
@@ -191,6 +206,7 @@ class NTUDataset(Dataset):
         image = F.to_dtype(F.to_image(image), torch.float32) / 255.0
 
         return image
+
 
 
 def parse_action_id(file_path: str) -> int:

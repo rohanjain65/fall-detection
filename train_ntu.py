@@ -30,7 +30,7 @@ train_loader = DataLoader(train_dataset, **args["dataloader"], shuffle=True)
 val_loader = DataLoader(val_dataset, **args["dataloader"], shuffle=False)
 
 # Create the model
-model = FallDetectionModel(**args["model"], num_classes=NUM_CLASSES).to(DEVICE)
+model = FallDetectionModel(**args["model"], num_classes=NUM_CLASSES, num_channels=train_dataset.get_num_channels()).to(DEVICE)
 
 # Create the optimizer
 optimizer = optim.AdamW(model.parameters(), **args["optimizer"])
