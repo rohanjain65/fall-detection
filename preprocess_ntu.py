@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from data.ntu_dataset import parse_action_id
 
-DATA_ROOT = "/data/fall-detection/ntu/processed/"
+DATA_ROOT = "/home/archy1/datasets/fall-detection/ntu/processed/"
 
 DEPTH_ROOT = join(DATA_ROOT, "depth")
 RGB_ROOT = join(DATA_ROOT, "rgb")
@@ -102,7 +102,7 @@ def rename_depth_files(root: str) -> None:
             os.rename(image_path, new_file_path)
 
 
-def balance_classes(root: str, *, ratio: int = 4) -> None:
+def balance_classes(root: str, *, ratio: int = 1) -> None:
     """
     Balance the number of falling and non-falling videos in the dataset by randomly removing non-falling videos.
 
@@ -183,6 +183,7 @@ def train_val_split(root: str, *, train_size: float = 0.75) -> None:
     shutil.rmtree(depth_root)
 
 
-# if __name__ == "__main__":
-# process_rgb_videos(join(RGB_ROOT, "videos"), RGB_ROOT)
-# rename_depth_files(DEPTH_ROOT)
+if __name__ == "__main__":
+    # process_rgb_videos(join(RGB_ROOT, "videos"), RGB_ROOT)
+    # rename_depth_files(DEPTH_ROOT)
+    balance_classes(join(DATA_ROOT, "train"))
