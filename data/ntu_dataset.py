@@ -46,7 +46,7 @@ class NTUDataset(Dataset):
     Args:
         root (str): The path to the root directory of the dataset.
         split (str): The split to use, must be one of 'train', 'val', or 'test'.
-        modality (str): The modality to use, must be one of 'rgb' or 'depth'.
+        modality (str): The modality to use, must be one of  'rgb', 'depth', or 'both'
         transformations (Callable[[Tensor], Tensor]): Transformations to apply to each image, optional.
     """
 
@@ -64,15 +64,21 @@ class NTUDataset(Dataset):
         assert os.path.exists(join(root, split)), f"Split {split} does not exist in dataset root {root}."
 
         # Validate the modality
-        assert modality in ["rgb", "depth"], f"Invalid modality {modality}, must be one of 'rgb' or 'depth'."
+        assert modality in ["rgb", "depth", "both"], f"Invalid modality {modality}, must be one of  'rgb', 'depth', or 'both'."
 
         self.modality = modality
-        self.root = join(root, split, modality)
+        self.split = split
+
+        if modality == "both":
+            self.root = join(root, split, "rgb")
+        else:
+            self.root = join(root, split, modality)
+
+        self.video_paths = [join(self.root, video) for video in os.listdir(self.root)]
+
         self.transformations = transformations
 
         # Load the dataset metadata
-        self.video_paths = [join(self.root, video) for video in os.listdir(self.root)]
-        # self.video_paths = self.video_paths[:1000]  # Limit to 100 videos for testing
         self.data = self._process_data(self.video_paths)
 
     def _process_data(self, video_paths: List[str]) -> List[Tuple[int, int, int]]:
@@ -128,26 +134,63 @@ class NTUDataset(Dataset):
             idx (int): The index of the frame in the concatenated dataset.
 
         Returns:
-            image (Tensor): The image, with shape (3, H, W) if RGB, or (1, H, W) if depth.
+            image (Tensor): The image with shape:
+                - (3, H, W) if modality is "rgb"
+                - (1, H, W) if modality is "depth"
+                - (4, H, W) if modality is "both", with RGB in first 3 channels and depth in 4th
             class_id (int): The class id of the frame.
         """
 
         # Get the video index, frame index, and class id from the data
         video_index, frame_index, class_id = self.data[idx]
 
-        # Construct the image path
-        image_path = join(self.video_paths[video_index], f"{frame_index}.png")
+        if self.modality == "both":
+            # Load the RGB image
+            rgb_image_path = join(self.video_paths[video_index], f"{frame_index}.png")
 
-        # Load the image
-        image = Image.open(image_path).convert("RGB")
+            rgb_image = self._load_image(rgb_image_path, modality="rgb")
 
-        image = F.to_dtype(F.to_image(image), torch.float32) / 255.0
+            # Load the depth image
+            depth_image_path = rgb_image_path.replace("rgb", "depth")
+
+            depth_image = self._load_image(depth_image_path, modality="depth")
+
+            # Resize the depth image to match the RGB image
+            depth_image = F.resize(depth_image, size=rgb_image.shape[1:])
+
+            # Combine the RGB and depth images
+            image = torch.cat([rgb_image, depth_image], dim=0)
+        else:
+            # Load the image
+            image_path = join(self.video_paths[video_index], f"{frame_index}.png")
+
+            image = self._load_image(image_path, modality=self.modality)
 
         # Apply transformations if provided
         if self.transformations:
             image = self.transformations(image)
 
         return image, class_id
+
+    def _load_image(self, image_path: str, modality: str) -> Tensor:
+        """
+        Load an RGB/Depth image from the given path.
+
+        Args:
+            image_path (str): Path to the image file.
+            modality (str): The modality of the image, either 'rgb' or 'depth'.
+
+        Returns:
+            image (Tensor): The loaded image as a tensor.
+        """
+
+        image = Image.open(image_path)
+
+        image = image.convert("RGB") if modality == "rgb" else image.convert("L")
+
+        image = F.to_dtype(F.to_image(image), torch.float32) / 255.0
+
+        return image
 
 
 def parse_action_id(file_path: str) -> int:

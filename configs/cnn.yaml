@@ -9,16 +9,21 @@ optimizer:
 train:
   epochs: 10
   output_dir: "weights/"
-  run_name: "convnext-tiny_focal-loss"
+  run_name: "convnext-tiny_ntu-rgb_240p"
 
 dataset:
-  root: "/data/fall-detection/ntu/processed/"
+  root: "/home/archy1/datasets/fall-detection/ntu/processed/"
   modality: "rgb"
 
+transforms:
+  image_size: [240, 426]
+  
+
 dataloader:
-  batch_size: 128
-  num_workers: 4
+  batch_size: 96
+  num_workers: 8
 
 tags:
   - "cnn"
   - "rgb"
+  - "ntu"

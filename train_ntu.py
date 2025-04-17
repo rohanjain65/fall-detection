@@ -3,7 +3,7 @@ import wandb
 from torch import optim
 from torch.utils.data import DataLoader
 
-from data.ntu_dataset import NTUDataset
+from data.ntu_dataset import NUM_CLASSES, NTUDataset
 from data.transforms import get_train_transforms, get_val_transforms
 from model.model import FallDetectionModel
 from utils.criterion import FallDetectionCriterion
@@ -17,19 +17,23 @@ set_random_seed(42)
 args = load_config("configs/cnn.yaml")
 
 # Load the training & validation data
-train_dataset = NTUDataset(**args["dataset"], split="train", transformations=get_train_transforms())
-val_dataset = NTUDataset(**args["dataset"], split="val", transformations=get_val_transforms())
+
+args["transforms"]["modality"] = args["dataset"]["modality"]
+
+# Load the training & validation data
+train_dataset = NTUDataset(**args["dataset"], split="train", transformations=get_train_transforms(**args["transforms"]))
+
+val_dataset = NTUDataset(**args["dataset"], split="val", transformations=get_val_transforms(**args["transforms"]))
 
 # Create the data loaders
 train_loader = DataLoader(train_dataset, **args["dataloader"], shuffle=True)
 val_loader = DataLoader(val_dataset, **args["dataloader"], shuffle=False)
 
 # Create the model
-model = FallDetectionModel(**args["model"]).to(DEVICE)
+model = FallDetectionModel(**args["model"], num_classes=NUM_CLASSES).to(DEVICE)
 
 # Create the optimizer
 optimizer = optim.AdamW(model.parameters(), **args["optimizer"])
-
 
 # Create the loss function
 class_frequencies = train_dataset.calculate_class_frequencies().to(DEVICE)
