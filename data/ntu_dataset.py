@@ -2,7 +2,7 @@ import os
 import re
 from glob import glob
 from os.path import join
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Tuple
 
 import torch
 from PIL import Image
@@ -67,27 +67,18 @@ class NTUDataset(Dataset):
         assert modality in ["rgb", "depth", "both"], f"Invalid modality {modality}, must be one of  'rgb', 'depth', or 'both'."
 
         self.modality = modality
-        self.split = split  # Store split to use for "both" modality
-        self.root_dir = root  # Store the original root
-        
-        # Set root path based on modality
+        self.split = split
+
         if modality == "both":
-            # For "both" modality, we don't set self.root as we'll access rgb and depth separately
-            self.rgb_root = join(root, split, "rgb")
-            self.depth_root = join(root, split, "depth")
-            # Ensure both directories exist
-            assert os.path.exists(self.rgb_root), f"RGB directory {self.rgb_root} does not exist."
-            assert os.path.exists(self.depth_root), f"Depth directory {self.depth_root} does not exist."
-            # Load the dataset metadata from RGB (assuming same structure in depth)
-            self.video_paths = [join(self.rgb_root, video) for video in os.listdir(self.rgb_root)]
+            self.root = join(root, split, "rgb")
         else:
             self.root = join(root, split, modality)
-            self.video_paths = [join(self.root, video) for video in os.listdir(self.root)]
-            
+
+        self.video_paths = [join(self.root, video) for video in os.listdir(self.root)]
+
         self.transformations = transformations
 
         # Load the dataset metadata
-        self.video_paths = self.video_paths[:100]  # Limit to 100 videos for testing
         self.data = self._process_data(self.video_paths)
 
     def _process_data(self, video_paths: List[str]) -> List[Tuple[int, int, int]]:
@@ -152,53 +143,54 @@ class NTUDataset(Dataset):
 
         # Get the video index, frame index, and class id from the data
         video_index, frame_index, class_id = self.data[idx]
-        
-        if self.modality == "both":
-            # Get the video name from the RGB path
-            video_name = os.path.basename(self.video_paths[video_index])
-            
-            # Construct RGB image path
-            rgb_image_path = join(self.rgb_root, video_name, f"{frame_index}.png")
-            
-            # Construct depth image path
-            depth_image_path = join(self.depth_root, video_name, f"{frame_index}.png")
-            
-            # Load the RGB image
-            rgb_image = Image.open(rgb_image_path).convert("RGB")
-            rgb_tensor = F.to_dtype(F.to_image(rgb_image), torch.float32) / 255.0
-            
-            # Load the depth image and convert to grayscale/single channel
-            depth_image = Image.open(depth_image_path).convert("L")  # Convert to grayscale
-            depth_tensor = F.to_dtype(F.to_image(depth_image), torch.float32) / 255.0
-            
-            # Resize depth tensor to match RGB tensor size
-            depth_tensor = F.resize(depth_tensor, size=rgb_tensor.shape[1:])
 
-            # Combine RGB and depth into a 4-channel tensor
-            image = torch.cat([rgb_tensor, depth_tensor], dim=0)
-            
-            # Apply transformations if provided
-            # Note: Transformations may need to be adapted to handle 4-channel images
-            if self.transformations:
-                image = self.transformations(image)
-                
+        if self.modality == "both":
+            # Load the RGB image
+            rgb_image_path = join(self.video_paths[video_index], f"{frame_index}.png")
+
+            rgb_image = self._load_image(rgb_image_path, modality="rgb")
+
+            # Load the depth image
+            depth_image_path = rgb_image_path.replace("rgb", "depth")
+
+            depth_image = self._load_image(depth_image_path, modality="depth")
+
+            # Resize the depth image to match the RGB image
+            depth_image = F.resize(depth_image, size=rgb_image.shape[1:])
+
+            # Combine the RGB and depth images
+            image = torch.cat([rgb_image, depth_image], dim=0)
         else:
-            # Construct the image path for rgb or depth modality
+            # Load the image
             image_path = join(self.video_paths[video_index], f"{frame_index}.png")
 
-            # Load the image
-            if self.modality == "rgb":
-                image = Image.open(image_path).convert("RGB")
-            else:  # depth
-                image = Image.open(image_path).convert("L")  # Convert to grayscale for depth
-            
-            image = F.to_dtype(F.to_image(image), torch.float32) / 255.0
+            image = self._load_image(image_path, modality=self.modality)
 
-            # Apply transformations if provided
-            if self.transformations:
-                image = self.transformations(image)
+        # Apply transformations if provided
+        if self.transformations:
+            image = self.transformations(image)
 
         return image, class_id
+
+    def _load_image(self, image_path: str, modality: str) -> Tensor:
+        """
+        Load an RGB/Depth image from the given path.
+
+        Args:
+            image_path (str): Path to the image file.
+            modality (str): The modality of the image, either 'rgb' or 'depth'.
+
+        Returns:
+            image (Tensor): The loaded image as a tensor.
+        """
+
+        image = Image.open(image_path)
+
+        image = image.convert("RGB") if modality == "rgb" else image.convert("L")
+
+        image = F.to_dtype(F.to_image(image), torch.float32) / 255.0
+
+        return image
 
 
 def parse_action_id(file_path: str) -> int:
