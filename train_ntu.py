@@ -14,7 +14,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 set_random_seed(42)
 
-args = load_config("configs/cnn.yaml")
+args = load_config("configs/swin.yaml")
 
 # Load the training & validation data
 

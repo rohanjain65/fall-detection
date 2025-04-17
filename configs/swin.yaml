@@ -1,5 +1,5 @@
 model:
-  backbone: "convnext_tiny"
+  backbone: "swin_t"
   pretrained: true
 
 optimizer:
@@ -9,7 +9,7 @@ optimizer:
 train:
   epochs: 10
   output_dir: "weights/"
-  run_name: "convnext-tiny_ntu-rgb_240p"
+  run_name: "swin-t_ntu-rgb_240p"
 
 dataset:
   root: "/home/archy1/datasets/fall-detection/ntu/processed/"
@@ -23,6 +23,6 @@ dataloader:
   num_workers: 8
 
 tags:
-  - "cnn"
+  - "vit"
   - "rgb"
   - "ntu"
