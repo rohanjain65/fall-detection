@@ -1,0 +1,28 @@
+model:
+  backbone: "vit_b_16"
+  pretrained: true
+
+optimizer:
+  lr: 1.0e-4
+  weight_decay: 1.0e-2
+
+train:
+  epochs: 2
+  output_dir: "weights/"
+  run_name: "vit-b-16_ntu-rgb_240p"
+
+dataset:
+  root: "/home/tdutton/datasets/fall-detection/ntu/processed/"
+  modality: "rgb"
+
+transforms:
+  image_size: [224, 224]
+
+dataloader:
+  batch_size: 128
+  num_workers: 8
+
+tags:
+  - "vit"
+  - "rgb"
+  - "ntu"

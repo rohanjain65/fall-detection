@@ -6,14 +6,14 @@ from torchvision import models
 
 from utils.misc import take_annotation_from
 
-Backbone = Union[models.ConvNeXt, models.SwinTransformer]
+Backbone = Union[models.ConvNeXt, models.SwinTransformer, models.VisionTransformer]
 
 class ImageClassifier(nn.Module):
     """
     Vision model for fall detection.
 
     Args:
-        backbone (str): Name of the backbone model, currently only supports models from the ConvNeXt and SwinTransformer families.
+        backbone (str): Name of the backbone model, currently only supports models from the ConvNeXt, ViT, and SwinTransformer families.
         num_classes (int): Number of output classes.
         pretrained (bool, optional): Load pretrained weights, enabled by default.
     """
@@ -26,14 +26,19 @@ class ImageClassifier(nn.Module):
         # Load the backbone
         self.backbone: Backbone = getattr(models, backbone)(weights="DEFAULT" if pretrained else None)
 
-        # Replace the first convolutional layer
-        self._replace_first_conv(num_channels)
-
-        # Replace the classifier
+        # Replace the first convoluational layer and the classifier
         if isinstance(self.backbone, models.ConvNeXt):
+            self._replace_first_conv(num_channels)
+
             self.classifier = self._replace_convnext_classifier(num_classes)
         elif isinstance(self.backbone, models.SwinTransformer):
+            self._replace_first_conv(num_channels)
+
             self.classifier = self._replace_swin_classifier(num_classes)
+        elif isinstance(self.backbone, models.VisionTransformer):
+            self._replace_vit_first_conv(num_channels)
+
+            self.classifier = self._replace_vit_classifier(num_classes)
         else:
             raise ValueError(f"Unsupported backbone model: {backbone}") 
         
@@ -80,7 +85,7 @@ class ImageClassifier(nn.Module):
 
     def _replace_first_conv(self, num_channels: int) -> None:
         """
-        In-place replacement of the first convolutional layer of the backbone.
+        In-place replacement of the first convolutional layer of the backbone for ConvNext and SwinTransformer models.
 
         Args:
             num_channels (int): Number of input channels.
@@ -103,6 +108,32 @@ class ImageClassifier(nn.Module):
             padding=padding,
             bias=True,
         )
+
+    def _replace_vit_first_conv(self, num_channels: int) -> None:
+        """
+        In-place replacement of the first convolutional layer of the backbone for ViT models.
+
+        Args:
+            num_channels (int): Number of input channels.
+        """
+
+        # Don't need to replace for RGB imagery
+        if num_channels == 3:
+            return
+        out_channels = self.backbone.conv_proj.out_channels
+        kernel_size = self.backbone.conv_proj.kernel_size
+        stride = self.backbone.conv_proj.stride
+        padding = self.backbone.conv_proj.padding
+
+        self.backbone.conv_proj = nn.Conv2d(
+            num_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            bias=True,
+        )
+
 
     def _replace_convnext_classifier(self, num_classes: int) -> nn.Linear:
         """
@@ -138,6 +169,26 @@ class ImageClassifier(nn.Module):
         # Replace the classifier
         num_features = self.backbone.head.in_features
         self.backbone.head = nn.Identity()
+
+        # Create a new classifier
+        classifier = nn.Linear(num_features, num_classes)
+
+        return classifier
+
+    def _replace_vit_classifier(self, num_classes: int) -> nn.Linear:
+        """
+        Removes the classifier of a ViT backbone and replaces it with a new one.
+
+        Args:
+            num_classes (int): Number of output classes.
+
+        Returns:
+            classifier (nn.Linear): The new classifier layer.
+        """
+
+        # Replace the classifier
+        num_features = self.backbone.heads[0].in_features
+        self.backbone.heads[0] = nn.Identity()
 
         # Create a new classifier
         classifier = nn.Linear(num_features, num_classes)
