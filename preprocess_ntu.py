@@ -18,7 +18,6 @@ DATA_ROOT = "/home/archy1/datasets/fall-detection/ntu/processed/"
 
 DEPTH_ROOT = join(DATA_ROOT, "depth")
 RGB_ROOT = join(DATA_ROOT, "rgb")
-IR_ROOT = join(DATA_ROOT, "ir")
 
 
 def process_video_file(file_path: str, output_root: str, extension: str = ".avi") -> None:
@@ -184,6 +183,7 @@ def train_val_split(root: str, *, train_size: float = 0.75) -> None:
 
 
 if __name__ == "__main__":
-    # process_rgb_videos(join(RGB_ROOT, "videos"), RGB_ROOT)
-    # rename_depth_files(DEPTH_ROOT)
+    process_rgb_videos(join(RGB_ROOT, "videos"), RGB_ROOT)
+    rename_depth_files(DEPTH_ROOT)
     balance_classes(join(DATA_ROOT, "train"))
+    train_val_split(DATA_ROOT)
